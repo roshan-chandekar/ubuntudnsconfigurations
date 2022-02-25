@@ -1,0 +1,166 @@
+
+
+ *** How to Install and Configure DNS Server on Ubuntu 20 19 18 LTS
+ 
+ Replace :
+ My Domain : hg.local = Your-Domain
+ Server DNS :
+	- HostName : dns1 = Your-HostName
+	- FQDN : dns1.hg.local = Your-FQDN
+	- IP : 192.168.1.11 = Your-IP
+	- Network : 192.168.1.0/24
+******* ******* ********
+	
+	
+	sudo apt install -y bind9 bind9utils bind9-doc dnsutils
+
+	systemctl status bind9
+	sudo ufw status
+	sudo ufw allow bind9
+	sudo ufw status
+	cd /etc/bind
+	ll
+	sudo vim named.conf.local
+		
+
+//Forward Zone
+
+zone "hg.local" IN { // Domain name : hg.local
+    
+      type master; // Primary DNS : master
+
+     file "/etc/bind/forward.hg.local"; // Forward lookup file ( in step 3.3 )
+
+     allow-update { none; }; // Primary DNS set : "none" ;
+
+};
+
+
+//Reverse Zone 
+
+zone "1.168.192.in-addr.arpa" IN { //Reverse lookup name, should match your network in reverse order
+
+     type master; // Primary DNS : master
+
+     file "/etc/bind/reverse.hg.local"; //Reverse lookup file ( in step 3.4 )
+
+     allow-update { none; }; //Primary DNS set : "none;" ;
+};
+
+	sudo vim named.conf.options
+options{
+forwarders {
+	8.8.8.8;
+	8.8.4.4;
+};
+
+}
+
+
+	sudo touch forward.hg.local
+	ls
+	sudo vim forward.hg.local
+
+*** Forward lookup file
+
+$TTL	604800
+@	IN	SOA	dns1.hg.local. root.hg.local. (
+			3		; Serial
+			604800		; Refresh
+			86400		; Retry
+			2419200	; Expire
+			604800 )	; Negative Cache TTL
+;--- Name Server Information
+
+@	IN	NS	dns1.hg.local.
+
+;--- IP address of Name Server
+
+dns1	IN	A	192.168.1.11
+
+;--- Mail Exchanger ( if exists )
+
+hg.local.	IN	MX 10	mail1.hg.local.
+
+;--- A - Record HostName To Ip Address
+
+apps1	IN	A	192.168.1.14
+mail1	IN	A	192.168.1.15
+
+;--- CNAME record
+
+www	IN	CNAME 	apps1.hg.local.
+ftp	IN	CNAME	apps1.hg.local.
+
+
+	sudo touch reverse.hg.local
+	ls
+	sudo vim reverse.hg.local
+
+*** Reverse lookup file
+
+$TTL	604800
+@	IN	SOA	hg.local. root.hg.local. (
+			3	; Serial
+			604800	; Refresh
+			86400	; Retry
+			2419200 ; Expire
+			604800 ); Negative Cache TTL
+;---Name Server Information
+
+@	IN	NS	dns1.hg.local.
+
+;---Reverse lookup for Name Server
+
+11	IN	PTR	dns1.hg.local.
+
+;---PTR Record IP address to HostName
+
+14	IN	PTR	apps1.hg.local.
+15	IN	PTR	mail1.hg.local.
+
+
+	sudo named-checkconf
+	sudo named-checkzone hg.local forward.hg.local
+	sudo named-checkzone 1.168.192.in-addr.arpa reverse.hg.local
+	sudo systemctl restart blind9
+	sudo vim /etc/resolv.conf
+nameserver 192.168.1.11
+	ping www.hg.local
+	ping ftp.hg.local
+	
+
+Go to widnows
+
+run===> ncpa.cpl
+ethernet adapter= right click and set dns ip
+
+cmd= ping dns1.hg.local
+cmd= nslookup
+dns1.hg.local
+
+output: Server:
+	Address:
+	
+	Name: dns1.hg.local
+	Address:
+
+
+DNS on windows client
+
+
+	vim /etc/resolve.conf
+nameserver 192.168.1.11
+	nslookup
+	dns1.hg.local
+output: Server:
+	Address:
+	
+	Name: dns1.hg.local
+	Address:
+	www.hg.local
+	
+exit
+
+	
+	
